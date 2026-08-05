@@ -56,7 +56,7 @@ def train_model(model: nn.Module, X_train: torch.Tensor, y_train: torch.Tensor,
 if __name__ == "__main__":
     from data_loader import load_stock_data
     from explore import explore
-    from models import StockLSTM
+    from models import StockGRU, StockLSTM
     from preprocessing import chronological_split, fit_scaler, transform_series
     from windowing import make_tensors
 
@@ -65,8 +65,8 @@ if __name__ == "__main__":
     sc = fit_scaler(tr)
     Xtr, ytr = make_tensors(transform_series(sc, tr), name="train")
 
-    model = StockLSTM()
-    _, losses, _ = train_model(model, Xtr, ytr, epochs=10)
-
-    assert losses[-1] < losses[0], "10 epoch sonunda loss dusmedi!"
-    print(f"[train] Dogrulama OK: loss {losses[0]:.6f} -> {losses[-1]:.6f}")
+    # train_model degistirilmeden hem LSTM hem GRU'yu egitebilmeli.
+    for name, model in [("StockLSTM", StockLSTM()), ("StockGRU", StockGRU())]:
+        _, losses, _ = train_model(model, Xtr, ytr, epochs=10)
+        assert losses[-1] < losses[0], f"{name}: 10 epoch sonunda loss dusmedi!"
+        print(f"[train] {name} dogrulama OK: loss {losses[0]:.6f} -> {losses[-1]:.6f}")
