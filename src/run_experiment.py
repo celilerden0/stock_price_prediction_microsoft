@@ -1,5 +1,12 @@
 """LSTM vs GRU deneyi: aynı veri, aynı hiperparametreler, 100 epoch.
 
+Kısıt: Model, ham fiyat SEVİYESİ yerine gunluk log-return tahmin edecek şekilde
+eğitilir (bkz. preprocessing.to_log_returns). Fiyat seviyesiyle MinMaxScaler fit
+edilirse test döneminde fiyat train aralığının (max $186) dışına çıktığında
+(test'te $284'e kadar çıkıyor) model ekstrapolasyon yapmak zorunda kalıp
+sistematik olarak düşük tahmin üretiyordu. Return'ler dar ve durağan bir aralıkta
+kaldığı için bu sorunu ortadan kaldırır.
+
 Kısıt: Adil karşılaştırma için seed her modelden ÖNCE 42'ye resetlenir
 (model ağırlık başlatma ve DataLoader shuffle sırası ikisinde de aynı olsun diye).
 
@@ -23,7 +30,7 @@ import torch
 from data_loader import load_stock_data
 from explore import explore
 from models import StockGRU, StockLSTM
-from preprocessing import chronological_split, fit_scaler, transform_series
+from preprocessing import chronological_split, fit_scaler, to_log_returns, transform_series
 from train import train_model
 from windowing import make_tensors
 
@@ -39,8 +46,9 @@ def run_experiment():
 
     df = explore(load_stock_data())
     tr, te = chronological_split(df["Close"])
-    sc = fit_scaler(tr)
-    Xtr, ytr = make_tensors(transform_series(sc, tr), name="train")
+    tr_returns = to_log_returns(tr)   # train icin "onceki gun" yok -> ilk gun return=0
+    sc = fit_scaler(tr_returns)       # scaler artik fiyat degil, RETURN uzerine fit ediliyor
+    Xtr, ytr = make_tensors(transform_series(sc, tr_returns), name="train")
 
     loss_history = {}
     training_times = {}

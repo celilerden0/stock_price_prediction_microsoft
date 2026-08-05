@@ -6,6 +6,12 @@ yüzünden test[20:] üzerinde çalışıyor (814 gün). Bu ikisini doğrudan ka
 yanıltıcı olurdu, bu yüzden Naive burada ortak 814 günlük kümeye kısıtlanarak
 YENİDEN hesaplanır. Linear Regression zaten aynı pencerelemeyle üretildiği için
 baseline_metrics.json'daki değeri doğrudan (ve doğrulanarak) kullanılır.
+
+Kritik kısıt: LSTM/GRU artık log-return tahmin ediyor (run_experiment.py), fiyat
+değil. Dolar cinsinden karşılaştırma için tahmin edilen return, bir önceki günün
+GERÇEK fiyatına uygulanarak (price_pred[t] = price_true[t-1] * exp(return_pred[t]))
+tek-adım (one-step) dolar fiyatına geri dönüştürülür. Bu, Naive/LinReg'in de her
+zaman gerçek geçmişten tahmin ürettiği yaklaşımla tutarlıdır (hata biriktirmez).
 """
 from __future__ import annotations
 
@@ -25,7 +31,7 @@ from baselines import linear_regression_baseline, naive_baseline
 from data_loader import load_stock_data
 from explore import explore
 from models import StockGRU, StockLSTM
-from preprocessing import SCALER_PATH, chronological_split, transform_series
+from preprocessing import SCALER_PATH, chronological_split, to_log_returns, transform_series
 from windowing import LOOKBACK, make_tensors
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -57,20 +63,28 @@ def evaluate():
     df = explore(load_stock_data())
     tr, te = chronological_split(df["Close"])
     with open(SCALER_PATH, "rb") as f:
-        scaler = pickle.load(f)  # egitimde kullanilan, kaydedilmis scaler (yeniden fit YOK)
+        scaler = pickle.load(f)  # egitimde kullanilan, RETURN scaler'i (yeniden fit YOK)
 
-    Xte, yte = make_tensors(transform_series(scaler, te), name="test")
+    # test'in ilk gunu icin "onceki gun" olarak train'in son GERCEK fiyati kullanilir
+    # (gelecek bilgisi degil, sadece kronolojik surekliligi korur -- bkz. to_log_returns).
+    te_returns = to_log_returns(te, prev_price=tr.values[-1])
+    Xte, yte = make_tensors(transform_series(scaler, te_returns), name="test")
 
-    # --- LSTM / GRU tahminleri (dolar cinsine cevrilir) ---
+    # --- LSTM / GRU: scaled return -> gercek return -> dolar fiyati ---
     lstm = _load_model(StockLSTM, "lstm")
     gru = _load_model(StockGRU, "gru")
     with torch.no_grad():
-        lstm_pred_scaled = lstm(Xte).numpy()
-        gru_pred_scaled = gru(Xte).numpy()
+        lstm_ret_scaled = lstm(Xte).numpy()
+        gru_ret_scaled = gru(Xte).numpy()
 
-    lstm_pred = scaler.inverse_transform(lstm_pred_scaled).reshape(-1)
-    gru_pred = scaler.inverse_transform(gru_pred_scaled).reshape(-1)
-    dl_actual = scaler.inverse_transform(yte.numpy()).reshape(-1)   # (814,) ortak gun kumesi
+    lstm_ret = scaler.inverse_transform(lstm_ret_scaled).reshape(-1)
+    gru_ret = scaler.inverse_transform(gru_ret_scaled).reshape(-1)
+
+    # hedef gun i+LOOKBACK icin "bir onceki gun"un GERCEK fiyati: test[LOOKBACK-1 : -1]
+    prev_actual_price = te.values[LOOKBACK - 1: LOOKBACK - 1 + len(lstm_ret)]
+    lstm_pred = prev_actual_price * np.exp(lstm_ret)
+    gru_pred = prev_actual_price * np.exp(gru_ret)
+    dl_actual = te.values[LOOKBACK:LOOKBACK + len(lstm_ret)]        # (814,) ortak gun kumesi, dogrudan gercek fiyat
 
     # --- Linear Regression: zaten ayni pencerelemeyle (lookback=20) uretiliyor ---
     lr_true, lr_pred = linear_regression_baseline(tr.values, te.values, lookback=LOOKBACK)

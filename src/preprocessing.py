@@ -33,6 +33,30 @@ def chronological_split(series: pd.Series, train_ratio: float = 0.8):
     return train, test
 
 
+def to_log_returns(price_series: pd.Series, prev_price: float | None = None) -> pd.Series:
+    """Fiyat serisini gunluk log-return'e cevirir: r_t = log(p_t / p_{t-1}).
+
+    Neden: MinMaxScaler fiyat SEVIYESINE fit edilirse (train max $186), test doneminde
+    fiyat bu araligin disina ciktiginda (ornegin $284) model gormedigi bir olcekte
+    ekstrapolasyon yapmak zorunda kalir ve sistematik olarak dusuk tahmin uretir.
+    Return'ler ise fiyat seviyesinden bagimsiz, dar ve durgun (stationary) bir aralikta
+    kalir, bu yuzden train'de gorulen olcek test'te de buyuk olcude gecerli olur.
+
+    prev_price: serinin ilk gunu icin "bir onceki gun" fiyati. train icin None birakilir
+    (ilk gun icin return 0 kabul edilir; windowing zaten ilk `lookback` degeri hicbir
+    zaman hedef olarak kullanmadigi icin bu yapay deger sonuca karismaz). test icin
+    train'in SON fiyati verilir -- bu gelecek bilgisi degildir, sadece kronolojik
+    surekliligi korur (test'in ilk gunu, kendinden onceki gercek/bilinen fiyata gore
+    hesaplanir).
+    """
+    values = price_series.values.astype(float)
+    prev_values = np.empty_like(values)
+    prev_values[0] = prev_price if prev_price is not None else values[0]
+    prev_values[1:] = values[:-1]
+    returns = np.log(values / prev_values)
+    return pd.Series(returns, index=price_series.index)
+
+
 def fit_scaler(train: pd.Series, save: bool = True) -> MinMaxScaler:
     """MinMaxScaler(feature_range=(-1, 1))'i SADECE train verisine fit eder.
 
