@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Ortamlar
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+*.log
+
+# NOT: *.pkl IGNORE EDILMEZ -> scaler.pkl commit'lenecek.
+# NOT: data/*.csv ve results/* commit'lenir (sonuçlar görünsün).
