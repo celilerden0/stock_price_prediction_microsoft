@@ -121,16 +121,16 @@ def evaluate():
     ]
 
     # --- Tablo (konsol + markdown) ---
-    header = f"{'Model':<20} | {'RMSE ($)':>10} | {'MAE ($)':>10} | {'Egitim suresi (s)':>18}"
+    header = f"{'Model':<20} | {'MSE':>12} | {'RMSE ($)':>10} | {'MAE ($)':>10} | {'Egitim suresi (s)':>18}"
     sep = "-" * len(header)
     print("\n" + header)
     print(sep)
-    md_lines = ["| Model | RMSE ($) | MAE ($) | Egitim suresi (s) |",
-                "|---|---|---|---|"]
+    md_lines = ["| Model | MSE | RMSE ($) | MAE ($) | Egitim suresi (s) |",
+                "|---|---|---|---|---|"]
     for name, m, t in rows:
         t_str = f"{t:.2f}" if t is not None else "-"
-        print(f"{name:<20} | {m['rmse']:>10.4f} | {m['mae']:>10.4f} | {t_str:>18}")
-        md_lines.append(f"| {name} | {m['rmse']:.4f} | {m['mae']:.4f} | {t_str} |")
+        print(f"{name:<20} | {m['mse']:>12.4f} | {m['rmse']:>10.4f} | {m['mae']:>10.4f} | {t_str:>18}")
+        md_lines.append(f"| {name} | {m['mse']:.4f} | {m['rmse']:.4f} | {m['mae']:.4f} | {t_str} |")
     print()
 
     with open(RESULTS_DIR / "comparison.md", "w", encoding="utf-8") as f:

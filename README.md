@@ -77,12 +77,13 @@ jupyter notebook notebooks/stock_prediction.ipynb
 
 `results/comparison.md`:
 
-| Model | RMSE ($) | MAE ($) | Eğitim süresi (s) |
-|---|---|---|---|
-| Naive | 4.0400 | 2.8155 | - |
-| Linear Regression | 4.0862 | 2.8661 | - |
-| LSTM | 4.0456 | 2.8229 | 21.81 |
-| GRU | 4.0745 | 2.8485 | 54.52 |
+| Model | MSE | RMSE ($) | MAE ($) | Egitim suresi (s) |
+|---|---|---|---|---|
+| Naive | 16.3216 | 4.0400 | 2.8155 | - |
+| Linear Regression | 16.6971 | 4.0862 | 2.8661 | - |
+| LSTM | 16.3670 | 4.0456 | 2.8229 | 21.81 |
+| GRU | 16.6012 | 4.0745 | 2.8485 | 54.52 |
+
 
 **LSTM ve GRU, Naive baseline'ı geçemedi.** İkisi de Naive'e yakın ama ölçülebilir şekilde
 daha kötü RMSE veriyor. İncelemede, modellerin öğrenilebilir bir sinyal bulamayıp neredeyse
